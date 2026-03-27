@@ -1,0 +1,56 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*.*'
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore Jellyfin.Plugin.AbyssSpotlight/Jellyfin.Plugin.AbyssSpotlight.csproj
+
+      - name: Build
+        run: |
+          dotnet build Jellyfin.Plugin.AbyssSpotlight/Jellyfin.Plugin.AbyssSpotlight.csproj \
+            --configuration Release \
+            --no-restore \
+            -o ./build
+
+      - name: Compute checksum
+        id: checksum
+        run: |
+          CHECKSUM=$(md5sum ./build/Jellyfin.Plugin.AbyssSpotlight.dll | awk '{print $1}')
+          echo "md5=$CHECKSUM" >> "$GITHUB_OUTPUT"
+
+      - name: Update manifest checksum
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          sed -i "s/REPLACE_WITH_MD5_OF_DLL/${{ steps.checksum.outputs.md5 }}/g" \
+            Jellyfin.Plugin.AbyssSpotlight/manifest.json
+          sed -i "s|YOUR_GITHUB|${{ github.repository }}|g" \
+            Jellyfin.Plugin.AbyssSpotlight/manifest.json
+          sed -i "s/1.0.0.0/$TAG/g" \
+            Jellyfin.Plugin.AbyssSpotlight/manifest.json
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./build/Jellyfin.Plugin.AbyssSpotlight.dll
+            Jellyfin.Plugin.AbyssSpotlight/manifest.json
+          generate_release_notes: true

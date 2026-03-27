@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abyss Spotlight</title>
+  <link rel="stylesheet" href="/abyss-spotlight/spotlight.css" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+</head>
+<body>
+  <div id="spotlight-root">
+    <div id="backdrop-container">
+      <img id="backdrop-img" src="" alt="" aria-hidden="true" />
+      <div id="backdrop-gradient"></div>
+    </div>
+
+    <div id="content-container">
+      <img id="logo-img" src="" alt="" />
+      <h1 id="title-text"></h1>
+
+      <div id="meta-pills">
+        <span class="pill" id="pill-rating"></span>
+        <span class="pill" id="pill-year"></span>
+        <span class="pill" id="pill-runtime"></span>
+        <span class="pill" id="pill-score"></span>
+      </div>
+
+      <p id="overview-text"></p>
+
+      <div id="action-row">
+        <button id="btn-resume" class="btn-primary" onclick="navigateToItem()">
+          <span class="material-icons-round">play_arrow</span>
+          <span id="btn-resume-label">Resume</span>
+        </button>
+        <button id="btn-info" class="btn-secondary" onclick="navigateToDetail()">
+          <span class="material-icons-round">info</span>
+          More Info
+        </button>
+      </div>
+    </div>
+
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // ── Auth ──────────────────────────────────────────────────────────────────
+
+    function getAuth() {
+      let token = null, userId = null, serverId = null;
+
+      // Try jellyfin-initialization-data element (Jellyfin 10.9+)
+      try {
+        const el = window.parent.document.getElementById('jellyfin-initialization-data');
+        if (el) {
+          const d = JSON.parse(el.textContent);
+          token = d?.AccessToken;
+          userId = d?.User?.Id;
+          serverId = d?.ServerId;
+        }
+      } catch (_) {}
+
+      // Fallback: jellyfin_credentials in parent localStorage
+      if (!token) {
+        try {
+          const raw = window.parent.localStorage.getItem('jellyfin_credentials');
+          if (raw) {
+            const creds = JSON.parse(raw);
+            const server = creds?.Servers?.[0];
+            token = server?.AccessToken;
+            userId = server?.UserId;
+            serverId = server?.Id;
+          }
+        } catch (_) {}
+      }
+
+      return { token, userId, serverId };
+    }
+
+    function authHeaders(token) {
+      return {
+        'Authorization': `MediaBrowser Client="Abyss Spotlight", Device="Browser", DeviceId="abyss-spotlight", Version="1.0", Token="${token}"`
+      };
+    }
+
+    // ── Data fetching ─────────────────────────────────────────────────────────
+
+    async function fetchContinueWatching(token, userId) {
+      const url = `/Users/${userId}/Items/Resume?Limit=1&Recursive=true&Fields=Overview,BackdropImageTags,ImageTags,RunTimeTicks,OfficialRating,CommunityRating,ProductionYear,UserData&IncludeItemTypes=Movie,Episode`;
+      const res = await fetch(url, { headers: authHeaders(token) });
+      if (!res.ok) throw new Error(`Resume fetch failed: ${res.status}`);
+      const data = await res.json();
+      return data.Items?.[0] ?? null;
+    }
+
+    async function fetchSeriesForEpisode(token, seriesId) {
+      const url = `/Users/${token}/Items/${seriesId}?Fields=BackdropImageTags,ImageTags`;
+      // We just need the series backdrop — pass any non-empty string; Jellyfin allows this
+      const res = await fetch(`/Items/${seriesId}?Fields=BackdropImageTags,ImageTags,Name`, { headers: authHeaders(token) });
+      if (!res.ok) return null;
+      return res.json();
+    }
+
+    // ── Image URL builders ────────────────────────────────────────────────────
+
+    function backdropUrl(itemId, imageTag, itemType, seriesId, seriesImageTag) {
+      // For episodes, prefer the series backdrop
+      if (itemType === 'Episode' && seriesId && seriesImageTag) {
+        return `/Items/${seriesId}/Images/Backdrop?tag=${seriesImageTag}&maxWidth=1920&quality=90`;
+      }
+      if (imageTag) {
+        return `/Items/${itemId}/Images/Backdrop?tag=${imageTag}&maxWidth=1920&quality=90`;
+      }
+      return null;
+    }
+
+    function logoUrl(itemId, logoTag, seriesId, seriesLogoTag) {
+      if (seriesId && seriesLogoTag) {
+        return `/Items/${seriesId}/Images/Logo?tag=${seriesLogoTag}&maxHeight=120&quality=90`;
+      }
+      if (logoTag) {
+        return `/Items/${itemId}/Images/Logo?tag=${logoTag}&maxHeight=120&quality=90`;
+      }
+      return null;
+    }
+
+    // ── Formatting helpers ────────────────────────────────────────────────────
+
+    function formatRuntime(ticks) {
+      if (!ticks) return null;
+      const mins = Math.round(ticks / 600000000);
+      if (mins < 60) return `${mins}m`;
+      return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+    }
+
+    function truncate(str, max) {
+      if (!str || str.length <= max) return str;
+      return str.slice(0, max).trimEnd() + '…';
+    }
+
+    // ── DOM helpers ───────────────────────────────────────────────────────────
+
+    let _currentItemId = null;
+    let _currentItemType = null;
+    let _currentSeriesId = null;
+
+    function navigateToItem() {
+      if (!_currentItemId) return;
+      window.parent.location.hash = `#!/details?id=${_currentItemId}`;
+    }
+
+    function navigateToDetail() {
+      if (!_currentItemId) return;
+      window.parent.location.hash = `#!/details?id=${_currentItemId}`;
+    }
+
+    function setPill(el, value, prefix) {
+      if (value) {
+        el.textContent = prefix ? `${prefix} ${value}` : value;
+        el.style.display = '';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+
+    // ── Main render ───────────────────────────────────────────────────────────
+
+    async function render() {
+      const { token, userId } = getAuth();
+      if (!token || !userId) {
+        console.warn('[AbyssSpotlight] No auth token found — retrying in 2s');
+        setTimeout(render, 2000);
+        return;
+      }
+
+      const item = await fetchContinueWatching(token, userId);
+      if (!item) {
+        document.getElementById('spotlight-root').style.display = 'none';
+        return;
+      }
+
+      _currentItemId = item.Id;
+      _currentItemType = item.Type;
+      _currentSeriesId = item.SeriesId ?? null;
+
+      // Fetch series info for episodes
+      let series = null;
+      if (item.Type === 'Episode' && item.SeriesId) {
+        series = await fetchSeriesForEpisode(token, item.SeriesId).catch(() => null);
+      }
+
+      // Backdrop
+      const bTag = item.BackdropImageTags?.[0] ?? null;
+      const sBTag = series?.BackdropImageTags?.[0] ?? null;
+      const bUrl = backdropUrl(item.Id, bTag, item.Type, item.SeriesId, sBTag);
+      if (bUrl) {
+        const img = document.getElementById('backdrop-img');
+        img.src = bUrl;
+        img.onload = () => img.classList.add('loaded');
+      }
+
+      // Logo
+      const lTag = item.ImageTags?.Logo ?? null;
+      const sLTag = series?.ImageTags?.Logo ?? null;
+      const lUrl = logoUrl(item.Id, lTag, item.SeriesId, sLTag);
+      const logoEl = document.getElementById('logo-img');
+      if (lUrl) {
+        logoEl.src = lUrl;
+        logoEl.alt = item.SeriesName ?? item.Name ?? '';
+        logoEl.style.display = '';
+        document.getElementById('title-text').style.display = 'none';
+      } else {
+        logoEl.style.display = 'none';
+        const titleEl = document.getElementById('title-text');
+        titleEl.textContent = item.SeriesName ?? item.Name ?? '';
+        titleEl.style.display = '';
+      }
+
+      // Meta pills
+      setPill(document.getElementById('pill-rating'), item.OfficialRating, null);
+      setPill(document.getElementById('pill-year'), item.ProductionYear, null);
+      setPill(document.getElementById('pill-runtime'), formatRuntime(item.RunTimeTicks), null);
+      const score = item.CommunityRating ? item.CommunityRating.toFixed(1) : null;
+      setPill(document.getElementById('pill-score'), score, '★');
+
+      // Overview
+      const overviewEl = document.getElementById('overview-text');
+      const overview = item.Type === 'Episode'
+        ? `S${String(item.ParentIndexNumber ?? 0).padStart(2, '0')}E${String(item.IndexNumber ?? 0).padStart(2, '0')} — ${truncate(item.Overview, 160)}`
+        : truncate(item.Overview, 200);
+      overviewEl.textContent = overview ?? '';
+
+      // Resume button label
+      const pct = item.UserData?.PlayedPercentage ?? 0;
+      const resumeLabel = document.getElementById('btn-resume-label');
+      resumeLabel.textContent = pct > 2 ? 'Resume' : 'Play';
+
+      // Hide loading overlay
+      document.getElementById('loading-overlay').style.display = 'none';
+    }
+
+    // Boot when parent document is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', render);
+    } else {
+      render();
+    }
+  </script>
+</body>
+</html>
