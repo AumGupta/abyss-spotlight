@@ -42,7 +42,7 @@ Install **File Transformation** and restart Jellyfin.
 Add another repository with your manifest URL:
 
 ```
-https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/Jellyfin.Plugin.AbyssSpotlight/manifest.json
+https://raw.githubusercontent.com/AumGupta/abyss-spotlight/main/Jellyfin.Plugin.AbyssSpotlight/manifest.json
 ```
 
 Install **Abyss Spotlight** and restart Jellyfin.
