@@ -1,6 +1,6 @@
-# Abyss Spotlight — Jellyfin Plugin
+# Abyss Spotlight; Jellyfin Plugin
 
-A Jellyfin plugin that delivers the **Abyss theme** and **Spotlight home banner** as a proper installable plugin — no `.exe`, no manual file editing, works on every platform.
+A Jellyfin plugin that delivers the **Abyss theme** and **Spotlight home banner** as a proper installable plugin; no `.exe`, no manual file editing, works on every platform.
 
 ![Abyss Spotlight Banner](https://raw.githubusercontent.com/AumGupta/abyss-jellyfin/main/docs/assets/images/preview.png)
 
@@ -11,9 +11,9 @@ A Jellyfin plugin that delivers the **Abyss theme** and **Spotlight home banner*
 | Feature | Description |
 |---|---|
 | **Abyss CSS** | Automatically injects the Abyss stylesheet into Jellyfin's Custom CSS on startup |
-| **Spotlight banner** | Cinematic Continue Watching banner — backdrop, metadata pills, resume button |
-| **Config page** | Dashboard → Plugins → Abyss Spotlight — toggle features, customise colours and radius |
-| **Cross-platform** | Works on Windows, Linux, macOS, Docker, Synology NAS, Unraid — anywhere Jellyfin runs |
+| **Spotlight banner** | Cinematic Continue Watching banner; backdrop, metadata pills, resume button |
+| **Config page** | Dashboard → Plugins → Abyss Spotlight; toggle features, customise colours and radius |
+| **Cross-platform** | Works on Windows, Linux, macOS, Docker, Synology NAS, Unraid; anywhere Jellyfin runs |
 
 ---
 
@@ -21,7 +21,7 @@ A Jellyfin plugin that delivers the **Abyss theme** and **Spotlight home banner*
 
 - **Jellyfin 10.10.x**
 - **[File Transformation plugin](https://github.com/IAmParadox27/jellyfin-plugin-file-transformation)** by IAmParadox27  
-  *(required for the Spotlight iframe injection — the CSS-only mode works without it)*
+  *(required for the Spotlight iframe injection; the CSS-only mode works without it)*
 
 ---
 
@@ -59,7 +59,7 @@ Go to **Dashboard → Plugins → Abyss Spotlight** to:
 ## How it works
 
 ### Abyss CSS
-The plugin reads Jellyfin's branding configuration directly via `IServerConfigurationManager` — no HTTP calls, no credentials. It prepends the Abyss `@import` line and any custom CSS variable overrides to your Custom CSS field.
+The plugin reads Jellyfin's branding configuration directly via `IServerConfigurationManager`; no HTTP calls, no credentials. It prepends the Abyss `@import` line and any custom CSS variable overrides to your Custom CSS field.
 
 ### Spotlight injection
 Instead of modifying `home-html.*.chunk.js` on disk (fragile, breaks on Jellyfin updates, requires write permissions), the plugin registers a **File Transformation** callback. When Jellyfin serves the chunk file over HTTP, the File Transformation plugin intercepts the response in-memory and injects the Spotlight `<iframe>` snippet. The chunk on disk is never touched.
@@ -72,7 +72,7 @@ GET /abyss-spotlight/spotlight.html
 GET /abyss-spotlight/spotlight.css
 ```
 
-This means no files need to be copied anywhere — it works even in read-only container deployments.
+This means no files need to be copied anywhere; it works even in read-only container deployments.
 
 ---
 
@@ -89,8 +89,8 @@ Copy `dist/Jellyfin.Plugin.AbyssSpotlight.dll` to your Jellyfin plugins folder (
 
 ## Credits
 
-- [Abyss theme](https://github.com/AumGupta/abyss-jellyfin) by AumGupta — MIT License
-- [File Transformation plugin](https://github.com/IAmParadox27/jellyfin-plugin-file-transformation) by IAmParadox27 — GPL-3.0
+- [Abyss theme](https://github.com/AumGupta/abyss-jellyfin) by AumGupta; MIT License
+- [File Transformation plugin](https://github.com/IAmParadox27/jellyfin-plugin-file-transformation) by IAmParadox27; GPL-3.0
 - [Jellyfin plugin template](https://github.com/jellyfin/jellyfin-plugin-template)
 
 ## License
