@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jellyfin.Plugin.AbyssSpotlight")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7113125fd9a2465b5aced43388943387eb10b342")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jellyfin.Plugin.AbyssSpotlight")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jellyfin.Plugin.AbyssSpotlight")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
