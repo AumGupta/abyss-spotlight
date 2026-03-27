@@ -9,7 +9,7 @@ namespace Jellyfin.Plugin.AbyssSpotlight.Services;
 
 /// <summary>
 /// Hosted service that applies the Abyss CSS to Jellyfin's branding configuration on startup.
-/// Uses Jellyfin's internal IServerConfigurationManager; no HTTP calls, no credentials,
+/// Uses Jellyfin's internal IServerConfigurationManager — no HTTP calls, no credentials,
 /// works on every platform (Windows, Linux, macOS, Docker, NAS, etc.).
 /// </summary>
 public class BrandingService : IHostedService
@@ -17,9 +17,9 @@ public class BrandingService : IHostedService
     private readonly IServerConfigurationManager _configManager;
     private readonly ILogger<BrandingService> _logger;
 
-    // The @import line we inject. It is idempotent; we check for it before adding.
+    // The @import line we inject. It is idempotent — we check for it before adding.
     private const string AbyssImport = "@import url('https://cdn.jsdelivr.net/gh/AumGupta/abyss-jellyfin@main/abyss.css');";
-    private const string AbyssComment = "/* Applied by Abyss Spotlight plugin; https://github.com/AumGupta/abyss-jellyfin */";
+    private const string AbyssComment = "/* Applied by Abyss Spotlight plugin — https://github.com/AumGupta/abyss-jellyfin */";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BrandingService"/> class.
@@ -70,7 +70,7 @@ public class BrandingService : IHostedService
             {
                 _logger.LogInformation("[AbyssSpotlight] Abyss CSS import already present, ensuring overrides are up to date.");
 
-                // Replace only our managed block; leave any user CSS after our block untouched
+                // Replace only our managed block — leave any user CSS after our block untouched
                 var updatedCss = ReplaceAbyssBlock(currentCss, desiredBlock);
                 if (updatedCss != currentCss)
                 {
@@ -117,14 +117,14 @@ public class BrandingService : IHostedService
             return string.Empty;
         }
 
-        return $"""
+        return $$"""
 
 
-:root {{
-    --abyss-accent: {config.AccentColor};
-    --abyss-radius: {config.BorderRadius};
-    --abyss-indicator: {config.IndicatorColor};
-}}
+:root {
+    --abyss-accent: {{config.AccentColor}};
+    --abyss-radius: {{config.BorderRadius}};
+    --abyss-indicator: {{config.IndicatorColor}};
+}
 """;
     }
 
@@ -137,7 +137,7 @@ public class BrandingService : IHostedService
         var commentIndex = existingCss.IndexOf(AbyssComment, StringComparison.Ordinal);
         if (commentIndex < 0)
         {
-            // No comment marker found; just replace the import line directly
+            // No comment marker found — just replace the import line directly
             var importIndex = existingCss.IndexOf(AbyssImport, StringComparison.Ordinal);
             if (importIndex < 0) return existingCss;
             var end = existingCss.IndexOf('\n', importIndex + AbyssImport.Length);
