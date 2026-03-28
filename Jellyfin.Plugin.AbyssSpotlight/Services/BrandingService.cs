@@ -7,22 +7,20 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.AbyssSpotlight.Services;
 
 /// <summary>
-/// Runs on every Jellyfin startup and automatically:
-///   1. Injects the Abyss CSS @import into Custom CSS (idempotent)
-///   2. Applies custom CSS variable overrides if the user has changed them
-///
-/// No user interaction required — everything is applied the moment the plugin loads.
-/// Uses Jellyfin's internal IServerConfigurationManager, so no HTTP calls or
-/// credentials are needed. Works on every platform.
+/// Runs on every Jellyfin startup and automatically injects the Abyss CSS
+/// into Custom CSS branding. No user interaction required.
 /// </summary>
 public class BrandingService : IHostedService
 {
     private readonly IServerConfigurationManager _configManager;
     private readonly ILogger<BrandingService> _logger;
 
-    private const string AbyssImport  = "@import url('https://cdn.jsdelivr.net/gh/AumGupta/abyss-jellyfin@main/abyss.css');";
-    private const string AbyssMarker  = "/* Abyss Spotlight plugin */";
+    private const string AbyssImport = "@import url('https://cdn.jsdelivr.net/gh/AumGupta/abyss-jellyfin@main/abyss.css');";
+    private const string AbyssMarker = "/* Abyss Spotlight plugin */";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BrandingService"/> class.
+    /// </summary>
     public BrandingService(
         IServerConfigurationManager configManager,
         ILogger<BrandingService> logger)
@@ -56,28 +54,26 @@ public class BrandingService : IHostedService
     /// <inheritdoc />
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    // ── CSS injection ─────────────────────────────────────────────────────────
-
     private void ApplyCSS(PluginConfiguration config)
     {
         try
         {
-            var branding = _configManager.GetConfiguration<BrandingOptions>("branding");
+            // GetConfiguration() in Jellyfin 10.10 is non-generic — must pass Type and cast
+            var branding = (BrandingOptions)_configManager.GetConfiguration("branding");
             var existing = branding.CustomCss ?? string.Empty;
 
-            var overrides  = BuildOverrides(config);
-            var ourBlock   = $"{AbyssMarker}\n{AbyssImport}{overrides}";
+            var overrides = BuildOverrides(config);
+            var ourBlock  = $"{AbyssMarker}\n{AbyssImport}{overrides}";
 
             string updated;
 
             if (existing.Contains(AbyssImport))
             {
-                // Already injected — just refresh the overrides block if they changed
                 updated = ReplaceOurBlock(existing, ourBlock);
 
                 if (updated == existing)
                 {
-                    _logger.LogInformation("[AbyssSpotlight] CSS already up to date, nothing to do.");
+                    _logger.LogInformation("[AbyssSpotlight] CSS already up to date.");
                     EnsureAppliedFlag(config);
                     return;
                 }
@@ -86,7 +82,6 @@ public class BrandingService : IHostedService
             }
             else
             {
-                // First install — prepend our block, preserve any existing user CSS below
                 updated = string.IsNullOrWhiteSpace(existing)
                     ? ourBlock
                     : $"{ourBlock}\n\n{existing.TrimStart()}";
@@ -115,9 +110,6 @@ public class BrandingService : IHostedService
         }
     }
 
-    /// <summary>
-    /// Builds the :root CSS override block. Returns empty string if all values are defaults.
-    /// </summary>
     private static string BuildOverrides(PluginConfiguration config)
     {
         bool customAccent    = config.AccentColor    != "245, 245, 247";
@@ -138,16 +130,11 @@ public class BrandingService : IHostedService
 """;
     }
 
-    /// <summary>
-    /// Replaces our managed CSS block while leaving any user CSS that follows untouched.
-    /// </summary>
     private static string ReplaceOurBlock(string existing, string newBlock)
     {
-        // Find start of our block (marker comment)
         var start = existing.IndexOf(AbyssMarker, StringComparison.Ordinal);
         if (start < 0)
         {
-            // Marker missing (manually edited) — replace import line only
             var importIdx = existing.IndexOf(AbyssImport, StringComparison.Ordinal);
             if (importIdx < 0) return existing;
             var lineEnd = existing.IndexOf('\n', importIdx + AbyssImport.Length);
@@ -155,7 +142,6 @@ public class BrandingService : IHostedService
             return $"{newBlock}\n\n{tail.TrimStart()}";
         }
 
-        // Find end of our block — double newline separates it from user CSS
         var blockEnd = existing.IndexOf("\n\n", start + AbyssMarker.Length, StringComparison.Ordinal);
         var userCss  = blockEnd >= 0 ? existing[(blockEnd + 2)..].TrimStart() : string.Empty;
 
