@@ -5,43 +5,44 @@
   <title>Abyss Spotlight</title>
 </head>
 <body>
-<div id="AbyssSpotlightConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox,emby-select">
+<div id="AbyssSpotlightConfigPage"
+     data-role="page"
+     class="page type-interior pluginConfigurationPage"
+     data-require="emby-input,emby-button,emby-checkbox">
+
   <div data-role="content">
     <div class="content-primary">
 
       <!-- Header -->
       <div class="sectionTitleContainer sectionTitleContainerFlex">
-        <h2 class="sectionTitle">
-          Abyss Spotlight
-        </h2>
-        <a is="emby-linkbutton" class="raised button-alt headerHelpButton" target="_blank"
-           href="https://github.com/AumGupta/abyss-jellyfin">
+        <h2 class="sectionTitle">Abyss Spotlight</h2>
+        <a is="emby-linkbutton" class="raised button-alt headerHelpButton"
+           target="_blank" href="https://github.com/AumGupta/abyss-jellyfin">
           Abyss on GitHub
         </a>
       </div>
 
-      <!-- Status banner -->
-      <div class="paperList">
-        <div id="status-banner" class="paperListItem" style="padding: 12px 16px; border-radius: 8px; background: rgba(255,255,255,0.05); margin-bottom: 8px;">
-          <p style="margin: 0; opacity: 0.7; font-size: 0.9em;" id="status-text">Loading status…</p>
+      <!-- Status -->
+      <div class="paperList" style="margin-bottom: 1.5em;">
+        <div class="paperListItem" style="padding: 12px 16px; border-radius: 8px; background: rgba(255,255,255,0.05);">
+          <p id="status-text" style="margin: 0; opacity: 0.75; font-size: 0.9em;">Loading…</p>
         </div>
       </div>
 
-      <br/>
-
       <!-- Feature toggles -->
       <div class="paperList">
-        <h3 class="paperListItem paperItemDivider" style="padding: 12px 16px; font-size: 0.85em; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.08em;">
+        <h3 class="paperListItem paperItemDivider"
+            style="padding: 12px 16px; font-size: 0.8em; opacity: 0.55; text-transform: uppercase; letter-spacing: 0.08em;">
           Features
         </h3>
 
         <div class="paperListItem">
           <label class="emby-checkbox-label">
-            <input is="emby-checkbox" type="checkbox" id="chk-apply-css" />
+            <input is="emby-checkbox" type="checkbox" id="chk-css" />
             <span>Apply Abyss CSS automatically</span>
           </label>
           <div class="fieldDescription">
-            Injects the Abyss theme stylesheet into Dashboard → General → Custom CSS on startup.
+            Injects the Abyss theme stylesheet into Dashboard → General → Custom CSS on every startup.
           </div>
         </div>
 
@@ -51,19 +52,8 @@
             <span>Enable Spotlight banner</span>
           </label>
           <div class="fieldDescription">
-            Shows the cinematic Continue Watching banner at the top of your home screen.
+            Cinematic Continue Watching banner on the home screen.
             Requires the <strong>File Transformation</strong> plugin by IAmParadox27.
-          </div>
-        </div>
-
-        <div class="paperListItem">
-          <label class="emby-checkbox-label">
-            <input is="emby-checkbox" type="checkbox" id="chk-sections" />
-            <span>Configure home section order</span>
-          </label>
-          <div class="fieldDescription">
-            Automatically sets your home sections to: Continue Watching → Next Up → My Media → Recently Added.
-            (Takes effect on next Jellyfin restart.)
           </div>
         </div>
       </div>
@@ -72,7 +62,8 @@
 
       <!-- Theme customisation -->
       <div class="paperList">
-        <h3 class="paperListItem paperItemDivider" style="padding: 12px 16px; font-size: 0.85em; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.08em;">
+        <h3 class="paperListItem paperItemDivider"
+            style="padding: 12px 16px; font-size: 0.8em; opacity: 0.55; text-transform: uppercase; letter-spacing: 0.08em;">
           Theme Customisation
         </h3>
 
@@ -82,21 +73,15 @@
               Accent colour (R, G, B — no rgb() wrapper)
             </label>
             <input is="emby-input" type="text" id="inp-accent" placeholder="245, 245, 247" />
-            <div class="fieldDescription">
-              Used for buttons, active states, and progress bars. Default: <code>245, 245, 247</code> (near-white).
-            </div>
+            <div class="fieldDescription">Default: <code>245, 245, 247</code> (near-white)</div>
           </div>
         </div>
 
         <div class="paperListItem">
           <div class="inputContainer">
-            <label class="inputLabel inputLabelUnfocused" for="inp-radius">
-              Border radius
-            </label>
+            <label class="inputLabel inputLabelUnfocused" for="inp-radius">Border radius</label>
             <input is="emby-input" type="text" id="inp-radius" placeholder="24px" />
-            <div class="fieldDescription">
-              Applied globally to cards, dialogs, and containers. Default: <code>24px</code>.
-            </div>
+            <div class="fieldDescription">Default: <code>24px</code></div>
           </div>
         </div>
 
@@ -106,31 +91,26 @@
               Indicator pill colour (R, G, B)
             </label>
             <input is="emby-input" type="text" id="inp-indicator" placeholder="55, 55, 55" />
-            <div class="fieldDescription">
-              Background of episode count and other indicator pills. Default: <code>55, 55, 55</code>.
-            </div>
+            <div class="fieldDescription">Default: <code>55, 55, 55</code></div>
           </div>
         </div>
       </div>
 
       <br/>
 
-      <!-- Save button -->
       <div>
         <button is="emby-button" type="button" class="raised button-submit block" id="btn-save">
           <span>Save</span>
         </button>
       </div>
 
-      <!-- Dependency note -->
       <br/>
       <div class="paperList">
         <div class="paperListItem" style="padding: 12px 16px;">
-          <p style="margin: 0; font-size: 0.85em; opacity: 0.65; line-height: 1.6;">
+          <p style="margin: 0; font-size: 0.82em; opacity: 0.6; line-height: 1.7;">
             <strong>Spotlight requires the File Transformation plugin.</strong><br/>
-            If not installed, add this repository to your plugin sources:<br/>
-            <code>https://www.iamparadox.dev/jellyfin/plugins/manifest.json</code><br/>
-            Then install <em>File Transformation</em> and restart Jellyfin.
+            Add to plugin repositories:<br/>
+            <code>https://www.iamparadox.dev/jellyfin/plugins/manifest.json</code>
           </p>
         </div>
       </div>
@@ -140,65 +120,87 @@
 </div>
 
 <script type="text/javascript">
-  var AbyssSpotlightConfig = {
+(function () {
+  'use strict';
 
-    pluginId: '4a7e9b2c-1f3d-4c8a-9e5f-6d0b2a3c4e5f',
+  // Jellyfin's built-in plugin config API — no custom endpoints needed.
+  // GET  /Plugins/{guid}/Configuration   → returns raw XML deserialised to JS object by ApiClient
+  // POST /Plugins/{guid}/Configuration   → sends updated config
+  var PLUGIN_ID = '4a7e9b2c-1f3d-4c8a-9e5f-6d0b2a3c4e5f';
 
-    pageInit: function (page) {
-      var self = this;
+  function getConfigUrl() {
+    return ApiClient.getUrl('Plugins/' + PLUGIN_ID + '/Configuration');
+  }
 
-      // Load config from plugin API
-      ApiClient.ajax({
-        url: ApiClient.getUrl('abyss-spotlight/config'),
-        type: 'GET',
-        dataType: 'json'
-      }).then(function (config) {
-        page.querySelector('#chk-apply-css').checked = config.ApplyAbyssCSS;
-        page.querySelector('#chk-spotlight').checked = config.EnableSpotlight;
-        page.querySelector('#chk-sections').checked = config.ConfigureHomeSections;
-        page.querySelector('#inp-accent').value = config.AccentColor || '245, 245, 247';
-        page.querySelector('#inp-radius').value = config.BorderRadius || '24px';
-        page.querySelector('#inp-indicator').value = config.IndicatorColor || '55, 55, 55';
-
-        var statusText = config.CSSApplied
-          ? '✓ Abyss CSS has been applied. Reload your browser if you do not see the theme.'
-          : 'Abyss CSS not yet applied — save settings and restart Jellyfin.';
-        page.querySelector('#status-text').textContent = statusText;
-
-      }).catch(function () {
-        page.querySelector('#status-text').textContent = 'Could not load plugin configuration.';
-      });
-
-      // Save button handler
-      page.querySelector('#btn-save').addEventListener('click', function () {
-        var payload = {
-          ApplyAbyssCSS: page.querySelector('#chk-apply-css').checked,
-          EnableSpotlight: page.querySelector('#chk-spotlight').checked,
-          ConfigureHomeSections: page.querySelector('#chk-sections').checked,
-          AccentColor: page.querySelector('#inp-accent').value.trim() || '245, 245, 247',
-          BorderRadius: page.querySelector('#inp-radius').value.trim() || '24px',
-          IndicatorColor: page.querySelector('#inp-indicator').value.trim() || '55, 55, 55'
-        };
-
-        ApiClient.ajax({
-          url: ApiClient.getUrl('abyss-spotlight/config'),
-          type: 'POST',
-          data: JSON.stringify(payload),
-          contentType: 'application/json'
-        }).then(function () {
-          Dashboard.alert('Settings saved. Restart Jellyfin to apply changes.');
-        }).catch(function () {
-          Dashboard.alert('Failed to save settings.');
-        });
-      });
+  function setStatus(msg, ok) {
+    var el = document.getElementById('status-text');
+    if (el) {
+      el.textContent = msg;
+      el.style.color = ok === true ? '#4caf50' : ok === false ? '#f44336' : '';
     }
-  };
+  }
+
+  function populatePage(page, config) {
+    page.querySelector('#chk-css').checked       = config.ApplyAbyssCSS !== false;
+    page.querySelector('#chk-spotlight').checked = config.EnableSpotlight !== false;
+    page.querySelector('#inp-accent').value      = config.AccentColor    || '245, 245, 247';
+    page.querySelector('#inp-radius').value      = config.BorderRadius   || '24px';
+    page.querySelector('#inp-indicator').value   = config.IndicatorColor || '55, 55, 55';
+
+    if (config.CSSApplied) {
+      setStatus('✓ Abyss CSS is active. Hard-refresh (Ctrl+F5) if you do not see the theme.', true);
+    } else {
+      setStatus('Abyss CSS will be applied on next Jellyfin restart.', null);
+    }
+  }
+
+  function pageInit(page) {
+    // Load config via Jellyfin's standard plugin config API
+    ApiClient.ajax({ url: getConfigUrl(), type: 'GET', dataType: 'json' })
+      .then(function (config) {
+        populatePage(page, config);
+      })
+      .catch(function (err) {
+        console.error('[AbyssSpotlight] Failed to load config:', err);
+        setStatus('Could not load configuration. Check browser console for details.', false);
+      });
+
+    // Save
+    page.querySelector('#btn-save').addEventListener('click', function () {
+      setStatus('Saving…', null);
+
+      var updated = {
+        ApplyAbyssCSS:        page.querySelector('#chk-css').checked,
+        EnableSpotlight:      page.querySelector('#chk-spotlight').checked,
+        ConfigureHomeSections: true,                                         // always on
+        AccentColor:    page.querySelector('#inp-accent').value.trim()    || '245, 245, 247',
+        BorderRadius:   page.querySelector('#inp-radius').value.trim()    || '24px',
+        IndicatorColor: page.querySelector('#inp-indicator').value.trim() || '55, 55, 55',
+        CSSApplied: false   // reset so BrandingService re-applies on next restart
+      };
+
+      ApiClient.ajax({
+        url:         getConfigUrl(),
+        type:        'POST',
+        data:        JSON.stringify(updated),
+        contentType: 'application/json'
+      })
+      .then(function () {
+        setStatus('✓ Saved! Restart Jellyfin for changes to take effect.', true);
+      })
+      .catch(function (err) {
+        console.error('[AbyssSpotlight] Failed to save config:', err);
+        setStatus('Save failed. Check browser console for details.', false);
+      });
+    });
+  }
 
   document.addEventListener('viewshow', function (e) {
-    if (e.target.id === 'AbyssSpotlightConfigPage') {
-      AbyssSpotlightConfig.pageInit(e.target);
+    if (e.target && e.target.id === 'AbyssSpotlightConfigPage') {
+      pageInit(e.target);
     }
   });
+}());
 </script>
 </body>
 </html>
