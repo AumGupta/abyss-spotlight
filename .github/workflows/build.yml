@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -34,21 +36,23 @@ jobs:
             --no-restore \
             -o ./build
 
-      - name: Compute checksum
-        id: checksum
-        run: |
-          CHECKSUM=$(md5sum ./build/Jellyfin.Plugin.AbyssSpotlight.dll | awk '{print $1}')
-          echo "md5=$CHECKSUM" >> "$GITHUB_OUTPUT"
+      - name: Bake manifest
+        id: bake
+        run: python3 bake_manifest.py
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
 
-      - name: Update manifest checksum
+      - name: Commit manifest to main
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
-          sed -i "s/REPLACE_WITH_MD5_OF_DLL/${{ steps.checksum.outputs.md5 }}/g" \
-            Jellyfin.Plugin.AbyssSpotlight/manifest.json
-          sed -i "s|YOUR_GITHUB|${{ github.repository }}|g" \
-            Jellyfin.Plugin.AbyssSpotlight/manifest.json
-          sed -i "s/1.0.0.0/$TAG/g" \
-            Jellyfin.Plugin.AbyssSpotlight/manifest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cp Jellyfin.Plugin.AbyssSpotlight/manifest.json /tmp/manifest_baked.json
+          git checkout main
+          cp /tmp/manifest_baked.json Jellyfin.Plugin.AbyssSpotlight/manifest.json
+          git add Jellyfin.Plugin.AbyssSpotlight/manifest.json
+          git diff --cached --quiet || git commit -m "chore: update manifest for ${{ github.ref_name }} [skip ci]"
+          git push origin main
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
