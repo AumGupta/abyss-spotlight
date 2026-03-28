@@ -36,8 +36,13 @@ jobs:
             --no-restore \
             -o ./build
 
+      - name: Package into zip
+        run: |
+          cd ./build
+          zip ../Jellyfin.Plugin.AbyssSpotlight.zip Jellyfin.Plugin.AbyssSpotlight.dll
+          cd ..
+
       - name: Bake manifest
-        id: bake
         run: python3 bake_manifest.py
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -58,6 +63,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./build/Jellyfin.Plugin.AbyssSpotlight.dll
+            ./Jellyfin.Plugin.AbyssSpotlight.zip
             Jellyfin.Plugin.AbyssSpotlight/manifest.json
           generate_release_notes: true

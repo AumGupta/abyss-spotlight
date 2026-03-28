@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
 """
 Bakes the Jellyfin plugin manifest.json with real values at CI time.
-Reads: GITHUB_REPOSITORY, GITHUB_REF_NAME
-Reads DLL: ./build/Jellyfin.Plugin.AbyssSpotlight.dll
-Writes: Jellyfin.Plugin.AbyssSpotlight/manifest.json
+Jellyfin requires the sourceUrl to point to a ZIP file, not a raw DLL.
 """
 
 import hashlib
 import json
 import os
-import sys
 from datetime import datetime, timezone
 
-repo      = os.environ["GITHUB_REPOSITORY"]          # e.g. AumGupta/abyss-spotlight
-ref_name  = os.environ["GITHUB_REF_NAME"]            # e.g. v1.0.0.0
-tag       = ref_name.lstrip("v")                     # e.g. 1.0.0.0
-timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-dll_path  = "./build/Jellyfin.Plugin.AbyssSpotlight.dll"
-download_url = f"https://github.com/{repo}/releases/download/{ref_name}/Jellyfin.Plugin.AbyssSpotlight.dll"
+repo         = os.environ["GITHUB_REPOSITORY"]   # e.g. AumGupta/abyss-spotlight
+ref_name     = os.environ["GITHUB_REF_NAME"]     # e.g. v1.0.0.0
+tag          = ref_name.lstrip("v")              # e.g. 1.0.0.0
+timestamp    = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+zip_path     = "./Jellyfin.Plugin.AbyssSpotlight.zip"
+download_url = f"https://github.com/{repo}/releases/download/{ref_name}/Jellyfin.Plugin.AbyssSpotlight.zip"
 
-# Compute MD5 checksum
-with open(dll_path, "rb") as f:
+# Jellyfin validates MD5 of the downloaded zip
+with open(zip_path, "rb") as f:
     checksum = hashlib.md5(f.read()).hexdigest()
 
 manifest = [
@@ -57,11 +54,10 @@ with open(out_path, "w") as f:
 
 print(f"Manifest written to {out_path}")
 print(f"  version:     {tag}")
-print(f"  checksum:    {checksum}")
+print(f"  checksum:    {checksum}  (MD5 of zip)")
 print(f"  sourceUrl:   {download_url}")
 print(f"  timestamp:   {timestamp}")
 
-# Write tag to GitHub output if running in Actions
 github_output = os.environ.get("GITHUB_OUTPUT")
 if github_output:
     with open(github_output, "a") as f:
