@@ -123,21 +123,13 @@
 (function () {
   'use strict';
 
-  // Jellyfin's built-in plugin config API — no custom endpoints needed.
-  // GET  /Plugins/{guid}/Configuration   → returns raw XML deserialised to JS object by ApiClient
-  // POST /Plugins/{guid}/Configuration   → sends updated config
   var PLUGIN_ID = '4a7e9b2c-1f3d-4c8a-9e5f-6d0b2a3c4e5f';
 
-  function getConfigUrl() {
-    return ApiClient.getUrl('Plugins/' + PLUGIN_ID + '/Configuration');
-  }
-
-  function setStatus(msg, ok) {
+  function setStatus(msg, colour) {
     var el = document.getElementById('status-text');
-    if (el) {
-      el.textContent = msg;
-      el.style.color = ok === true ? '#4caf50' : ok === false ? '#f44336' : '';
-    }
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = colour || '';
   }
 
   function populatePage(page, config) {
@@ -147,51 +139,47 @@
     page.querySelector('#inp-radius').value      = config.BorderRadius   || '24px';
     page.querySelector('#inp-indicator').value   = config.IndicatorColor || '55, 55, 55';
 
-    if (config.CSSApplied) {
-      setStatus('✓ Abyss CSS is active. Hard-refresh (Ctrl+F5) if you do not see the theme.', true);
-    } else {
-      setStatus('Abyss CSS will be applied on next Jellyfin restart.', null);
-    }
+    setStatus(
+      config.CSSApplied
+        ? '✓ Abyss CSS is active. Hard-refresh (Ctrl+F5) if you do not see the theme.'
+        : 'Abyss CSS will be applied on the next Jellyfin restart.',
+      config.CSSApplied ? '#4caf50' : ''
+    );
   }
 
   function pageInit(page) {
-    // Load config via Jellyfin's standard plugin config API
-    ApiClient.ajax({ url: getConfigUrl(), type: 'GET', dataType: 'json' })
+    // Use Jellyfin's dedicated plugin config method — handles auth and serialization correctly
+    ApiClient.getPluginConfiguration(PLUGIN_ID)
       .then(function (config) {
         populatePage(page, config);
       })
       .catch(function (err) {
-        console.error('[AbyssSpotlight] Failed to load config:', err);
-        setStatus('Could not load configuration. Check browser console for details.', false);
+        console.error('[AbyssSpotlight] getPluginConfiguration failed:', err);
+        setStatus('Could not load configuration.', '#f44336');
       });
 
-    // Save
     page.querySelector('#btn-save').addEventListener('click', function () {
-      setStatus('Saving…', null);
+      setStatus('Saving…', '');
 
+      // Read current values from the form
       var updated = {
-        ApplyAbyssCSS:        page.querySelector('#chk-css').checked,
-        EnableSpotlight:      page.querySelector('#chk-spotlight').checked,
-        ConfigureHomeSections: true,                                         // always on
-        AccentColor:    page.querySelector('#inp-accent').value.trim()    || '245, 245, 247',
-        BorderRadius:   page.querySelector('#inp-radius').value.trim()    || '24px',
-        IndicatorColor: page.querySelector('#inp-indicator').value.trim() || '55, 55, 55',
-        CSSApplied: false   // reset so BrandingService re-applies on next restart
+        ApplyAbyssCSS:         page.querySelector('#chk-css').checked,
+        EnableSpotlight:       page.querySelector('#chk-spotlight').checked,
+        ConfigureHomeSections: true,
+        AccentColor:    (page.querySelector('#inp-accent').value    || '').trim() || '245, 245, 247',
+        BorderRadius:   (page.querySelector('#inp-radius').value    || '').trim() || '24px',
+        IndicatorColor: (page.querySelector('#inp-indicator').value || '').trim() || '55, 55, 55',
+        CSSApplied: false
       };
 
-      ApiClient.ajax({
-        url:         getConfigUrl(),
-        type:        'POST',
-        data:        JSON.stringify(updated),
-        contentType: 'application/json'
-      })
-      .then(function () {
-        setStatus('✓ Saved! Restart Jellyfin for changes to take effect.', true);
-      })
-      .catch(function (err) {
-        console.error('[AbyssSpotlight] Failed to save config:', err);
-        setStatus('Save failed. Check browser console for details.', false);
-      });
+      ApiClient.updatePluginConfiguration(PLUGIN_ID, updated)
+        .then(function () {
+          setStatus('✓ Saved! Restart Jellyfin for changes to take effect.', '#4caf50');
+        })
+        .catch(function (err) {
+          console.error('[AbyssSpotlight] updatePluginConfiguration failed:', err);
+          setStatus('Save failed. See browser console for details.', '#f44336');
+        });
     });
   }
 
