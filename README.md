@@ -1,4 +1,4 @@
-# Abyss Spotlight; Jellyfin Plugin
+<!-- # Abyss Spotlight; Jellyfin Plugin
 
 A Jellyfin plugin that delivers the **Abyss theme** and **Spotlight home banner** as a proper installable plugin; no `.exe`, no manual file editing, works on every platform.
 
@@ -95,4 +95,4 @@ Copy `dist/Jellyfin.Plugin.AbyssSpotlight.dll` to your Jellyfin plugins folder (
 
 ## License
 
-MIT
+MIT -->
