@@ -1,255 +1,252 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Abyss Spotlight</title>
-  <link rel="stylesheet" href="/abyss-spotlight/spotlight.css" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Abyss Spotlight</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,300..700;1,17..18,300..700&display=swap"
+		rel="stylesheet" />
+	<!-- Served by SpotlightController as an embedded resource -->
+	<link rel="stylesheet" href="/abyss-spotlight/spotlight.css" />
 </head>
+
 <body>
-  <div id="spotlight-root">
-    <div id="backdrop-container">
-      <img id="backdrop-img" src="" alt="" aria-hidden="true" />
-      <div id="backdrop-gradient"></div>
-    </div>
 
-    <div id="content-container">
-      <img id="logo-img" src="" alt="" />
-      <h1 id="title-text"></h1>
+	<div id="backdrop"><img id="backdrop-img" alt="" /></div>
+	<div id="content">
+		<img id="logo" alt="" />
+		<div id="title"></div>
+		<div id="episode-label"></div>
+		<div id="meta"></div>
+		<div id="progress-wrap" style="display:none">
+			<div id="progress-bar"></div>
+		</div>
+		<div id="plot"></div>
+		<div id="buttons"></div>
+	</div>
+	<div id="clickzone"></div>
+	<div id="empty" style="display:none">Nothing in Continue Watching</div>
 
-      <div id="meta-pills">
-        <span class="pill" id="pill-rating"></span>
-        <span class="pill" id="pill-year"></span>
-        <span class="pill" id="pill-runtime"></span>
-        <span class="pill" id="pill-score"></span>
-      </div>
+	<script>
+		(async () => {
+			const $ = id => document.getElementById(id);
 
-      <p id="overview-text"></p>
+			function getBaseUrl() {
+				try {
+					const loc = window.top.location;
+					return `${loc.protocol}//${loc.host}`;
+				} catch {
+					try {
+						const creds = JSON.parse(localStorage.getItem('jellyfin_credentials'));
+						const s = creds?.Servers?.[0];
+						return (s?.ManualAddress || s?.LocalAddress || s?.RemoteAddress || '').replace(/\/$/, '');
+					} catch { return ''; }
+				}
+			}
 
-      <div id="action-row">
-        <button id="btn-resume" class="btn-primary" onclick="navigateToItem()">
-          <span class="material-icons-round">play_arrow</span>
-          <span id="btn-resume-label">Resume</span>
-        </button>
-        <button id="btn-info" class="btn-secondary" onclick="navigateToDetail()">
-          <span class="material-icons-round">info</span>
-          More Info
-        </button>
-      </div>
-    </div>
+			function getAuth() {
+				try {
+					// Try parent window's ApiClient first (most reliable when inside iframe)
+					const parentApiClient = window.top.ApiClient;
+					if (parentApiClient) {
+						return {
+							token: parentApiClient.accessToken(),
+							userId: parentApiClient.getCurrentUserId()
+						};
+					}
+				} catch {}
+				try {
+					const creds = JSON.parse(localStorage.getItem('jellyfin_credentials'));
+					const s = creds?.Servers?.[0];
+					return { token: s?.AccessToken, userId: s?.UserId };
+				} catch { return {}; }
+			}
 
-    <div id="loading-overlay">
-      <div class="spinner"></div>
-    </div>
-  </div>
+			function authHeaders(token) {
+				return { 'Authorization': `MediaBrowser Client="Jellyfin Web", Device="Abyss Spotlight", DeviceId="abyss-spotlight", Version="1.0", Token="${token}"` };
+			}
 
-  <script>
-    'use strict';
+			function formatRuntime(ticks) {
+				if (!ticks) return null;
+				const mins = Math.floor(ticks / 600000000);
+				if (mins < 60) return `${mins}m`;
+				const h = Math.floor(mins / 60), m = mins % 60;
+				return m > 0 ? `${h}h ${m}m` : `${h}h`;
+			}
 
-    // ── Auth ──────────────────────────────────────────────────────────────────
+			function metaPillWithIcon(iconSvg, text) {
+				const span = document.createElement('span');
+				span.className = 'meta-pill';
+				span.innerHTML = `${iconSvg}<span>${text}</span>`;
+				return span;
+			}
 
-    function getAuth() {
-      let token = null, userId = null, serverId = null;
+			function navigateTo(path) {
+				try { window.top.location.href = path; } catch { window.location.href = path; }
+			}
 
-      // Try jellyfin-initialization-data element (Jellyfin 10.9+)
-      try {
-        const el = window.parent.document.getElementById('jellyfin-initialization-data');
-        if (el) {
-          const d = JSON.parse(el.textContent);
-          token = d?.AccessToken;
-          userId = d?.User?.Id;
-          serverId = d?.ServerId;
-        }
-      } catch (_) {}
+			async function fetchImageBlob(url, headers) {
+				try {
+					const res = await fetch(url, { headers });
+					if (!res.ok) return null;
+					const blob = await res.blob();
+					return URL.createObjectURL(blob);
+				} catch { return null; }
+			}
 
-      // Fallback: jellyfin_credentials in parent localStorage
-      if (!token) {
-        try {
-          const raw = window.parent.localStorage.getItem('jellyfin_credentials');
-          if (raw) {
-            const creds = JSON.parse(raw);
-            const server = creds?.Servers?.[0];
-            token = server?.AccessToken;
-            userId = server?.UserId;
-            serverId = server?.Id;
-          }
-        } catch (_) {}
-      }
+			const base = getBaseUrl();
+			const { token, userId } = getAuth();
 
-      return { token, userId, serverId };
-    }
+			if (!token || !userId) {
+				$('empty').style.display = 'flex';
+				return;
+			}
 
-    function authHeaders(token) {
-      return {
-        'Authorization': `MediaBrowser Client="Abyss Spotlight", Device="Browser", DeviceId="abyss-spotlight", Version="1.0", Token="${token}"`
-      };
-    }
+			const headers = authHeaders(token);
+			let item = null;
 
-    // ── Data fetching ─────────────────────────────────────────────────────────
+			try {
+				const res = await fetch(
+					`${base}/Users/${userId}/Items/Resume?Limit=1&Recursive=true&Fields=Overview,RunTimeTicks,UserData,OfficialRating,CommunityRating,SeriesName,SeriesId,ParentIndexNumber,IndexNumber,PlaybackPositionTicks`,
+					{ headers }
+				);
+				const data = await res.json();
+				item = data?.Items?.[0];
+			} catch (e) {
+				console.error('[Abyss Spotlight] fetch error:', e);
+			}
 
-    async function fetchContinueWatching(token, userId) {
-      const url = `/Users/${userId}/Items/Resume?Limit=1&Recursive=true&Fields=Overview,BackdropImageTags,ImageTags,RunTimeTicks,OfficialRating,CommunityRating,ProductionYear,UserData&IncludeItemTypes=Movie,Episode`;
-      const res = await fetch(url, { headers: authHeaders(token) });
-      if (!res.ok) throw new Error(`Resume fetch failed: ${res.status}`);
-      const data = await res.json();
-      return data.Items?.[0] ?? null;
-    }
+			if (!item) {
+				$('empty').style.display = 'flex';
+				return;
+			}
 
-    async function fetchSeriesForEpisode(token, seriesId) {
-      const url = `/Users/${token}/Items/${seriesId}?Fields=BackdropImageTags,ImageTags`;
-      // We just need the series backdrop — pass any non-empty string; Jellyfin allows this
-      const res = await fetch(`/Items/${seriesId}?Fields=BackdropImageTags,ImageTags,Name`, { headers: authHeaders(token) });
-      if (!res.ok) return null;
-      return res.json();
-    }
+			const logoId = item.Type === 'Episode' ? (item.SeriesId || item.Id) : item.Id;
+			const detailId = item.Type === 'Episode' ? (item.SeriesId || item.Id) : item.Id;
+			const detailUrl = `/web/index.html#!/details?id=${detailId}`;
 
-    // ── Image URL builders ────────────────────────────────────────────────────
+			// Backdrop
+			const backdropImgEl = $('backdrop-img');
+			const backdropEl = $('backdrop');
 
-    function backdropUrl(itemId, imageTag, itemType, seriesId, seriesImageTag) {
-      // For episodes, prefer the series backdrop
-      if (itemType === 'Episode' && seriesId && seriesImageTag) {
-        return `/Items/${seriesId}/Images/Backdrop?tag=${seriesImageTag}&maxWidth=1920&quality=90`;
-      }
-      if (imageTag) {
-        return `/Items/${itemId}/Images/Backdrop?tag=${imageTag}&maxWidth=1920&quality=90`;
-      }
-      return null;
-    }
+			const primaryUrl = `${base}/Items/${item.Id}/Images/Primary?quality=90`;
+			const backdropUrl = `${base}/Items/${item.Type === 'Episode' ? (item.SeriesId || item.Id) : item.Id}/Images/Backdrop/0?quality=90`;
 
-    function logoUrl(itemId, logoTag, seriesId, seriesLogoTag) {
-      if (seriesId && seriesLogoTag) {
-        return `/Items/${seriesId}/Images/Logo?tag=${seriesLogoTag}&maxHeight=120&quality=90`;
-      }
-      if (logoTag) {
-        return `/Items/${itemId}/Images/Logo?tag=${logoTag}&maxHeight=120&quality=90`;
-      }
-      return null;
-    }
+			let backdropBlob = null;
+			if (item.Type === 'Episode') {
+				backdropBlob = await fetchImageBlob(primaryUrl, headers);
+				if (!backdropBlob) backdropBlob = await fetchImageBlob(backdropUrl, headers);
+				if (backdropBlob) backdropImgEl.style.objectPosition = 'center center';
+			} else {
+				backdropBlob = await fetchImageBlob(backdropUrl, headers);
+				if (backdropBlob) backdropImgEl.style.objectPosition = 'center 20%';
+			}
 
-    // ── Formatting helpers ────────────────────────────────────────────────────
+			if (backdropBlob) {
+				backdropImgEl.onload = () => backdropEl.classList.add('loaded');
+				backdropImgEl.src = backdropBlob;
+			} else {
+				backdropEl.classList.add('loaded');
+			}
 
-    function formatRuntime(ticks) {
-      if (!ticks) return null;
-      const mins = Math.round(ticks / 600000000);
-      if (mins < 60) return `${mins}m`;
-      return `${Math.floor(mins / 60)}h ${mins % 60}m`;
-    }
+			// Logo
+			const logoEl = $('logo');
+			const logoBlobUrl = await fetchImageBlob(`${base}/Items/${logoId}/Images/Logo?quality=90`, headers);
+			if (logoBlobUrl) {
+				logoEl.src = logoBlobUrl;
+				logoEl.style.display = 'block';
+			} else {
+				logoEl.style.display = 'none';
+				$('title').style.display = 'block';
+				$('title').textContent = item.Type === 'Episode' ? item.SeriesName : item.Name;
+			}
 
-    function truncate(str, max) {
-      if (!str || str.length <= max) return str;
-      return str.slice(0, max).trimEnd() + '…';
-    }
+			// Episode label
+			let episodePrefix = '';
+			if (item.Type === 'Episode') {
+				const parts = [];
+				if (item.ParentIndexNumber != null && item.IndexNumber != null) {
+					episodePrefix = `S${item.ParentIndexNumber} E${item.IndexNumber}`;
+					parts.push(episodePrefix);
+				}
+				if (item.Name) parts.push(item.Name);
+				$('episode-label').textContent = parts.join('  -  ');
+			}
 
-    // ── DOM helpers ───────────────────────────────────────────────────────────
+			// Buttons
+			const buttonsEl = $('buttons');
 
-    let _currentItemId = null;
-    let _currentItemType = null;
-    let _currentSeriesId = null;
+			const playBtn = document.createElement('button');
+			playBtn.className = 'btn btn-play';
+			playBtn.id = 'play-btn';
+			playBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="M320-273v-414q0-17 12-28.5t28-11.5q5 0 10.5 1.5T381-721l326 207q9 6 13.5 15t4.5 19q0 10-4.5 19T707-446L381-239q-5 3-10.5 4.5T360-233q-16 0-28-11.5T320-273Z"/></svg>${item.Type === 'Episode' ? `Continue  ${episodePrefix}` : 'Resume'}`;
+			playBtn.onclick = e => {
+				e.preventDefault();
+				try {
+					const parentDoc = window.top.document;
+					const resumeBtn = parentDoc.querySelector(
+						`[data-id="${item.Id}"][data-action="resume"], [data-id="${item.Id}"] [data-action="resume"]`
+					);
+					if (resumeBtn) { resumeBtn.click(); return; }
+					const cardBtn = parentDoc.querySelector(`[data-id="${item.Id}"]`);
+					if (cardBtn) { cardBtn.click(); return; }
+				} catch (err) {
+					console.warn('[Abyss Spotlight] Could not trigger playback via DOM:', err);
+				}
+				navigateTo(detailUrl);
+			};
+			buttonsEl.appendChild(playBtn);
 
-    function navigateToItem() {
-      if (!_currentItemId) return;
-      window.parent.location.hash = `#!/details?id=${_currentItemId}`;
-    }
+			// Meta pills
+			const metaEl = $('meta');
 
-    function navigateToDetail() {
-      if (!_currentItemId) return;
-      window.parent.location.hash = `#!/details?id=${_currentItemId}`;
-    }
+			if (item.OfficialRating) {
+				metaEl.appendChild(metaPillWithIcon(
+					`<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#e3e3e3"><path d="M168-144q-29 0-50.5-21.5T96-216v-528q0-29.7 21.5-50.85Q139-816 168-816h624q29 0 50.5 21.15T864-744v528q0 29-21.5 50.5T792-144H168Zm337.5-154.35Q516-308.7 516-324v-168q0-15.3-10.29-25.65Q495.42-528 480.21-528t-25.71 10.35Q444-507.3 444-492v168q0 15.3 10.29 25.65Q464.58-288 479.79-288t25.71-10.35ZM480-600q14 0 25-11t11-25.5q0-14.5-11-25T479.5-672q-14.5 0-25 10.35T444-636q0 14 10.35 25T480-600ZM168-228h72v-72h-72v72Zm552 0h72v-72h-72v72ZM168-372h72v-72h-72v72Zm552 0h72v-72h-72v72ZM168-516h72v-72h-72v72Zm552 0h72v-72h-72v72ZM168-660h72v-72h-72v72Zm552 0h72v-72h-72v72Z"/></svg>`,
+					item.OfficialRating
+				));
+			}
 
-    function setPill(el, value, prefix) {
-      if (value) {
-        el.textContent = prefix ? `${prefix} ${value}` : value;
-        el.style.display = '';
-      } else {
-        el.style.display = 'none';
-      }
-    }
+			const rt = formatRuntime(item.RunTimeTicks);
+			if (rt) {
+				metaEl.appendChild(metaPillWithIcon(
+					`<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#e3e3e3"><path d="M516-510v-174q0-15.3-10.29-25.65Q495.42-720 480.21-720t-25.71 10.35Q444-699.3 444-684v189q0 8 3 14.5t8 11.5l133.85 133.85Q600-324 614.5-324.5 629-325 640-336t11-25.5q0-14.5-11.34-25.75L516-510ZM480-96q-79.38 0-149.19-30T208.5-208.5Q156-261 126-330.96t-30-149.5Q96-560 126-630q30-70 82.5-122t122.46-82q69.96-30 149.5-30t149.55 30.24q70 30.24 121.79 82.08 51.78 51.84 81.99 121.92Q864-559.68 864-480q0 79.38-30 149.19T752-208.5Q700-156 629.87-126T480-96Z"/></svg>`,
+					rt
+				));
+			}
 
-    // ── Main render ───────────────────────────────────────────────────────────
+			if (item.CommunityRating) {
+				metaEl.appendChild(metaPillWithIcon(
+					`<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#e3e3e3"><path d="m480-285-164 98q-11 6-21.5 5t-18.5-7q-8-6-12-16.5t-1-21.5l43-183-145-123q-9-8-11-18.5t1-20.5q3-10 11-16.5t20-7.5l190-17 75-174q5-11 14-16.5t19-5.5q10 0 19 5.5t14 16.5l75 175 190 16q12 1 20 8t11 17q3 10 .5 20T798-533L654-410l43 183q3 11-1 21.5T684-189q-8 6-18.5 7t-21.5-5l-164-98Z"/></svg>`,
+					item.CommunityRating.toFixed(1)
+				));
+			}
 
-    async function render() {
-      const { token, userId } = getAuth();
-      if (!token || !userId) {
-        console.warn('[AbyssSpotlight] No auth token found — retrying in 2s');
-        setTimeout(render, 2000);
-        return;
-      }
+			// Progress bar
+			const played = item.UserData?.PlayedPercentage;
+			if (played && played > 0) {
+				$('progress-wrap').style.display = 'block';
+				$('progress-bar').style.width = `${Math.min(played, 100)}%`;
+			}
 
-      const item = await fetchContinueWatching(token, userId);
-      if (!item) {
-        document.getElementById('spotlight-root').style.display = 'none';
-        return;
-      }
+			// Plot
+			$('plot').textContent = item.Overview || '';
 
-      _currentItemId = item.Id;
-      _currentItemType = item.Type;
-      _currentSeriesId = item.SeriesId ?? null;
+			const infoBtn = document.createElement('a');
+			infoBtn.className = 'btn btn-info';
+			infoBtn.href = '#';
+			infoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="M423.5-703.5Q400-727 400-760t23.5-56.5Q447-840 480-840t56.5 23.5Q560-793 560-760t-23.5 56.5Q513-680 480-680t-56.5-23.5Zm14 566Q420-155 420-180v-360q0-25 17.5-42.5T480-600q25 0 42.5 17.5T540-540v360q0 25-17.5 42.5T480-120q-25 0-42.5-17.5Z"/></svg>`;
+			infoBtn.onclick = e => { e.preventDefault(); navigateTo(detailUrl); };
+			buttonsEl.appendChild(infoBtn);
 
-      // Fetch series info for episodes
-      let series = null;
-      if (item.Type === 'Episode' && item.SeriesId) {
-        series = await fetchSeriesForEpisode(token, item.SeriesId).catch(() => null);
-      }
+			$('clickzone').onclick = () => navigateTo(detailUrl);
+			$('content').classList.add('visible');
 
-      // Backdrop
-      const bTag = item.BackdropImageTags?.[0] ?? null;
-      const sBTag = series?.BackdropImageTags?.[0] ?? null;
-      const bUrl = backdropUrl(item.Id, bTag, item.Type, item.SeriesId, sBTag);
-      if (bUrl) {
-        const img = document.getElementById('backdrop-img');
-        img.src = bUrl;
-        img.onload = () => img.classList.add('loaded');
-      }
-
-      // Logo
-      const lTag = item.ImageTags?.Logo ?? null;
-      const sLTag = series?.ImageTags?.Logo ?? null;
-      const lUrl = logoUrl(item.Id, lTag, item.SeriesId, sLTag);
-      const logoEl = document.getElementById('logo-img');
-      if (lUrl) {
-        logoEl.src = lUrl;
-        logoEl.alt = item.SeriesName ?? item.Name ?? '';
-        logoEl.style.display = '';
-        document.getElementById('title-text').style.display = 'none';
-      } else {
-        logoEl.style.display = 'none';
-        const titleEl = document.getElementById('title-text');
-        titleEl.textContent = item.SeriesName ?? item.Name ?? '';
-        titleEl.style.display = '';
-      }
-
-      // Meta pills
-      setPill(document.getElementById('pill-rating'), item.OfficialRating, null);
-      setPill(document.getElementById('pill-year'), item.ProductionYear, null);
-      setPill(document.getElementById('pill-runtime'), formatRuntime(item.RunTimeTicks), null);
-      const score = item.CommunityRating ? item.CommunityRating.toFixed(1) : null;
-      setPill(document.getElementById('pill-score'), score, '★');
-
-      // Overview
-      const overviewEl = document.getElementById('overview-text');
-      const overview = item.Type === 'Episode'
-        ? `S${String(item.ParentIndexNumber ?? 0).padStart(2, '0')}E${String(item.IndexNumber ?? 0).padStart(2, '0')} — ${truncate(item.Overview, 160)}`
-        : truncate(item.Overview, 200);
-      overviewEl.textContent = overview ?? '';
-
-      // Resume button label
-      const pct = item.UserData?.PlayedPercentage ?? 0;
-      const resumeLabel = document.getElementById('btn-resume-label');
-      resumeLabel.textContent = pct > 2 ? 'Resume' : 'Play';
-
-      // Hide loading overlay
-      document.getElementById('loading-overlay').style.display = 'none';
-    }
-
-    // Boot when parent document is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', render);
-    } else {
-      render();
-    }
-  </script>
+		})();
+	</script>
 </body>
+
 </html>

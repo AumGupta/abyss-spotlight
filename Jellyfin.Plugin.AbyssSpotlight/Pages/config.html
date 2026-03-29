@@ -21,20 +21,15 @@
         </a>
       </div>
 
-      <!-- Info banner -->
-      <div class="paperList" style="margin-bottom: 1.5em;">
-        <div class="paperListItem" style="padding: 12px 16px; border-radius: 12px;">
-          <p style="margin: 0; opacity: 0.75; font-size: 0.9em; line-height: 1.6;">
-            ✓ Abyss CSS is applied automatically on every Jellyfin startup.<br/>
-            <span id="status-text" style="opacity: 0.6;">Loading…</span>
-          </p>
+      <div class="paperList" style="margin-bottom:1.5em;">
+        <div class="paperListItem" style="padding:12px 16px;border-radius:8px;background:rgba(255,255,255,0.05);">
+          <p id="status-text" style="margin:0;font-size:0.9em;line-height:1.6;opacity:0.8;">Loading…</p>
         </div>
       </div>
 
-      <!-- Spotlight toggle -->
       <div class="paperList">
         <h3 class="paperListItem paperItemDivider"
-            style="padding: 12px 16px; font-size: 0.8em; opacity: 0.55; text-transform: uppercase; letter-spacing: 0.08em;">
+            style="padding:12px 16px;font-size:0.8em;opacity:0.55;text-transform:uppercase;letter-spacing:0.08em;">
           Spotlight
         </h3>
         <div class="paperListItem">
@@ -51,23 +46,18 @@
 
       <br/>
 
-      <!-- Theme customisation -->
       <div class="paperList">
         <h3 class="paperListItem paperItemDivider"
-            style="padding: 12px 16px; font-size: 0.8em; opacity: 0.55; text-transform: uppercase; letter-spacing: 0.08em;">
+            style="padding:12px 16px;font-size:0.8em;opacity:0.55;text-transform:uppercase;letter-spacing:0.08em;">
           Theme Customisation
         </h3>
-
         <div class="paperListItem">
           <div class="inputContainer">
-            <label class="inputLabel inputLabelUnfocused" for="inp-accent">
-              Accent colour (R, G, B — no rgb() wrapper)
-            </label>
+            <label class="inputLabel inputLabelUnfocused" for="inp-accent">Accent colour (R, G, B)</label>
             <input is="emby-input" type="text" id="inp-accent" placeholder="245, 245, 247" />
             <div class="fieldDescription">Default: <code>245, 245, 247</code> (near-white)</div>
           </div>
         </div>
-
         <div class="paperListItem">
           <div class="inputContainer">
             <label class="inputLabel inputLabelUnfocused" for="inp-radius">Border radius</label>
@@ -75,12 +65,9 @@
             <div class="fieldDescription">Default: <code>24px</code></div>
           </div>
         </div>
-
         <div class="paperListItem">
           <div class="inputContainer">
-            <label class="inputLabel inputLabelUnfocused" for="inp-indicator">
-              Indicator pill colour (R, G, B)
-            </label>
+            <label class="inputLabel inputLabelUnfocused" for="inp-indicator">Indicator pill colour (R, G, B)</label>
             <input is="emby-input" type="text" id="inp-indicator" placeholder="55, 55, 55" />
             <div class="fieldDescription">Default: <code>55, 55, 55</code></div>
           </div>
@@ -97,10 +84,10 @@
 
       <br/>
       <div class="paperList">
-        <div class="paperListItem" style="padding: 12px 16px;">
-          <p style="margin: 0; font-size: 0.82em; opacity: 0.6; line-height: 1.7;">
+        <div class="paperListItem" style="padding:12px 16px;">
+          <p style="margin:0;font-size:0.82em;opacity:0.6;line-height:1.7;">
             <strong>Spotlight requires the File Transformation plugin.</strong><br/>
-            Add this to your plugin repositories, then install File Transformation and restart Jellyfin:<br/>
+            Add to plugin repositories:<br/>
             <code>https://www.iamparadox.dev/jellyfin/plugins/manifest.json</code>
           </p>
         </div>
@@ -118,41 +105,50 @@
 
   function setStatus(msg, colour) {
     var el = document.getElementById('status-text');
-    if (el) { el.textContent = msg; el.style.color = colour || ''; }
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = colour || '';
   }
 
   function pageInit(page) {
-    ApiClient.getPluginConfiguration(PLUGIN_ID)
+    // Load using Jellyfin's built-in plugin config fetch
+    ApiClient.getJSON(ApiClient.getUrl('Plugins/' + PLUGIN_ID + '/Configuration'))
       .then(function (config) {
         page.querySelector('#chk-spotlight').checked = config.EnableSpotlight !== false;
         page.querySelector('#inp-accent').value      = config.AccentColor    || '245, 245, 247';
         page.querySelector('#inp-radius').value      = config.BorderRadius   || '24px';
         page.querySelector('#inp-indicator').value   = config.IndicatorColor || '55, 55, 55';
-        setStatus('Spotlight: ' + (config.EnableSpotlight !== false ? 'enabled' : 'disabled'));
+        setStatus('✓ Abyss CSS is active. Abyss Spotlight is running.', '#4caf50');
       })
       .catch(function (err) {
-        console.error('[AbyssSpotlight] getPluginConfiguration failed:', err);
+        console.error('[AbyssSpotlight] load failed:', err);
         setStatus('Could not load configuration.', '#f44336');
       });
 
     page.querySelector('#btn-save').addEventListener('click', function () {
       setStatus('Saving…', '');
 
-      var updated = {
+      var config = {
         EnableSpotlight: page.querySelector('#chk-spotlight').checked,
         AccentColor:    (page.querySelector('#inp-accent').value    || '').trim() || '245, 245, 247',
         BorderRadius:   (page.querySelector('#inp-radius').value    || '').trim() || '24px',
         IndicatorColor: (page.querySelector('#inp-indicator').value || '').trim() || '55, 55, 55'
       };
 
-      ApiClient.updatePluginConfiguration(PLUGIN_ID, updated)
-        .then(function () {
-          setStatus('✓ Saved! Restart Jellyfin for changes to take effect.', '#4caf50');
-        })
-        .catch(function (err) {
-          console.error('[AbyssSpotlight] updatePluginConfiguration failed:', err);
-          setStatus('Save failed. See browser console for details.', '#f44336');
-        });
+      // ajax POST is the correct low-level call for plugin config in Jellyfin's dashboard
+      ApiClient.ajax({
+        type: 'POST',
+        url: ApiClient.getUrl('Plugins/' + PLUGIN_ID + '/Configuration'),
+        data: JSON.stringify(config),
+        contentType: 'application/json'
+      })
+      .then(function () {
+        setStatus('✓ Saved! Restart Jellyfin for changes to take effect.', '#4caf50');
+      })
+      .catch(function (err) {
+        console.error('[AbyssSpotlight] save failed:', err);
+        setStatus('Save failed. See browser console for details.', '#f44336');
+      });
     });
   }
 
