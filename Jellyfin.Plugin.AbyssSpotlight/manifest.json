@@ -3,18 +3,18 @@
     "category": "General",
     "description": "Cinematic Spotlight home banner and Abyss theme integration. Shows your current Continue Watching item as a full-width backdrop banner with metadata pills and a resume button. Applies the Abyss CSS theme automatically.",
     "guid": "4a7e9b2c-1f3d-4c8a-9e5f-6d0b2a3c4e5f",
-    "imageUrl": "https://raw.githubusercontent.com/AumGupta/abyss-spotlight/main/assets/banner.png",
+    "imageUrl": "https://raw.githubusercontent.com/AumGupta/abyss-jellyfin/main/docs/assets/favicon/apple-touch-icon.png",
     "name": "Abyss Spotlight",
     "overview": "Cinematic Spotlight home banner and Abyss theme integration for Jellyfin.",
     "owner": "AumGupta",
     "targetAbi": "10.10.0.0",
-    "timestamp": "2026-03-28T01:21:26Z",
+    "timestamp": "2026-03-29T17:19:06Z",
     "versions": [
       {
         "changelog": "Release 1.0.0.0",
-        "checksum": "a57b381e8cd09fd6b3d9fd01d8288af0",
+        "checksum": "c9c1c54ce5d98969204b49a2208994ad",
         "targetAbi": "10.10.0.0",
-        "timestamp": "2026-03-28T01:21:26Z",
+        "timestamp": "2026-03-29T17:19:06Z",
         "version": "1.0.0.0",
         "sourceUrl": "https://github.com/AumGupta/abyss-spotlight/releases/download/v1.0.0.0/Jellyfin.Plugin.AbyssSpotlight.zip"
       }
