@@ -8,13 +8,13 @@
     "overview": "Cinematic Spotlight home banner and Abyss theme integration for Jellyfin.",
     "owner": "AumGupta",
     "targetAbi": "10.10.0.0",
-    "timestamp": "2026-03-29T18:35:51Z",
+    "timestamp": "2026-03-29T18:43:56Z",
     "versions": [
       {
         "changelog": "Release 1.0.0.0",
-        "checksum": "1b2b80abe8e7446734e5bb895f8a80e0",
+        "checksum": "4d054b337c4172b5735bdcd1c22891e1",
         "targetAbi": "10.10.0.0",
-        "timestamp": "2026-03-29T18:35:51Z",
+        "timestamp": "2026-03-29T18:43:56Z",
         "version": "1.0.0.0",
         "sourceUrl": "https://github.com/AumGupta/abyss-spotlight/releases/download/v1.0.0.0/Jellyfin.Plugin.AbyssSpotlight.zip"
       }
