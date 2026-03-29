@@ -9,9 +9,9 @@ import json
 import os
 from datetime import datetime, timezone
 
-repo         = os.environ["GITHUB_REPOSITORY"]   # e.g. AumGupta/abyss-spotlight
-ref_name     = os.environ["GITHUB_REF_NAME"]     # e.g. v1.0.0.0
-tag          = ref_name.lstrip("v")              # e.g. 1.0.0.0
+repo         = os.environ["GITHUB_REPOSITORY"]
+ref_name     = os.environ["GITHUB_REF_NAME"]
+tag          = ref_name.lstrip("v")
 timestamp    = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 zip_path     = "./Jellyfin.Plugin.AbyssSpotlight.zip"
 download_url = f"https://github.com/{repo}/releases/download/{ref_name}/Jellyfin.Plugin.AbyssSpotlight.zip"
@@ -29,7 +29,7 @@ manifest = [
             "with metadata pills and a resume button. Applies the Abyss CSS theme automatically."
         ),
         "guid": "4a7e9b2c-1f3d-4c8a-9e5f-6d0b2a3c4e5f",
-        "imageUrl": "https://github.com/AumGupta/abyss-spotlight/blob/8f1c1d9f018cf8da5b1b1fa463a86cdb53ae06ea/assets/banner.png?raw=true",
+        "imageUrl": "https://github.com/AumGupta/abyss-spotlight/blob/fe226c29df0115597e675b5dfac037d9604ba947/assets/banner.png?raw=true",
         "name": "Abyss Spotlight",
         "overview": "Cinematic Spotlight home banner and Abyss theme integration for Jellyfin.",
         "owner": "AumGupta",
