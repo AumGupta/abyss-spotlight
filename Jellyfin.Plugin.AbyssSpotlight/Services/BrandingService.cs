@@ -7,8 +7,9 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.AbyssSpotlight.Services;
 
 /// <summary>
-/// Runs on every Jellyfin startup and automatically injects the Abyss CSS
-/// into Custom CSS branding. No user interaction required.
+/// Automatically injects the Abyss CSS @import into Jellyfin's Custom CSS on every startup.
+/// Idempotent — safe to run repeatedly. Uses Jellyfin's internal config manager,
+/// no HTTP calls or credentials required. Works on every platform.
 /// </summary>
 public class BrandingService : IHostedService
 {
@@ -32,36 +33,21 @@ public class BrandingService : IHostedService
     /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        var config = Plugin.Instance?.Configuration;
-        if (config is null)
-        {
-            _logger.LogWarning("[AbyssSpotlight] Plugin instance unavailable — skipping startup.");
-            return Task.CompletedTask;
-        }
-
-        if (config.ApplyAbyssCSS)
-        {
-            ApplyCSS(config);
-        }
-        else
-        {
-            _logger.LogInformation("[AbyssSpotlight] CSS injection disabled by user config.");
-        }
-
+        ApplyCSS();
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private void ApplyCSS(PluginConfiguration config)
+    private void ApplyCSS()
     {
         try
         {
-            // GetConfiguration() in Jellyfin 10.10 is non-generic — must pass Type and cast
             var branding = (BrandingOptions)_configManager.GetConfiguration("branding");
             var existing = branding.CustomCss ?? string.Empty;
 
+            var config   = Plugin.Instance?.Configuration ?? new PluginConfiguration();
             var overrides = BuildOverrides(config);
             var ourBlock  = $"{AbyssMarker}\n{AbyssImport}{overrides}";
 
@@ -70,43 +56,28 @@ public class BrandingService : IHostedService
             if (existing.Contains(AbyssImport))
             {
                 updated = ReplaceOurBlock(existing, ourBlock);
-
                 if (updated == existing)
                 {
-                    _logger.LogInformation("[AbyssSpotlight] CSS already up to date.");
-                    EnsureAppliedFlag(config);
+                    _logger.LogInformation("[AbyssSpotlight] Abyss CSS already up to date.");
                     return;
                 }
-
-                _logger.LogInformation("[AbyssSpotlight] Updating Abyss CSS overrides.");
+                _logger.LogInformation("[AbyssSpotlight] Refreshing Abyss CSS overrides.");
             }
             else
             {
                 updated = string.IsNullOrWhiteSpace(existing)
                     ? ourBlock
                     : $"{ourBlock}\n\n{existing.TrimStart()}";
-
                 _logger.LogInformation("[AbyssSpotlight] Injecting Abyss CSS for the first time.");
             }
 
             branding.CustomCss = updated;
             _configManager.SaveConfiguration("branding", branding);
-
-            EnsureAppliedFlag(config);
             _logger.LogInformation("[AbyssSpotlight] Abyss CSS applied successfully.");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[AbyssSpotlight] Failed to apply Abyss CSS.");
-        }
-    }
-
-    private static void EnsureAppliedFlag(PluginConfiguration config)
-    {
-        if (!config.CSSApplied)
-        {
-            config.CSSApplied = true;
-            Plugin.Instance!.SaveConfiguration();
         }
     }
 

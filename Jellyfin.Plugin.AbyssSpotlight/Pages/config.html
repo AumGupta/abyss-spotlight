@@ -13,7 +13,6 @@
   <div data-role="content">
     <div class="content-primary">
 
-      <!-- Header -->
       <div class="sectionTitleContainer sectionTitleContainerFlex">
         <h2 class="sectionTitle">Abyss Spotlight</h2>
         <a is="emby-linkbutton" class="raised button-alt headerHelpButton"
@@ -22,30 +21,22 @@
         </a>
       </div>
 
-      <!-- Status -->
+      <!-- Info banner -->
       <div class="paperList" style="margin-bottom: 1.5em;">
-        <div class="paperListItem" style="padding: 12px 16px; border-radius: 8px; background: rgba(255,255,255,0.05);">
-          <p id="status-text" style="margin: 0; opacity: 0.75; font-size: 0.9em;">Loading…</p>
+        <div class="paperListItem" style="padding: 12px 16px; border-radius: 12px;">
+          <p style="margin: 0; opacity: 0.75; font-size: 0.9em; line-height: 1.6;">
+            ✓ Abyss CSS is applied automatically on every Jellyfin startup.<br/>
+            <span id="status-text" style="opacity: 0.6;">Loading…</span>
+          </p>
         </div>
       </div>
 
-      <!-- Feature toggles -->
+      <!-- Spotlight toggle -->
       <div class="paperList">
         <h3 class="paperListItem paperItemDivider"
             style="padding: 12px 16px; font-size: 0.8em; opacity: 0.55; text-transform: uppercase; letter-spacing: 0.08em;">
-          Features
+          Spotlight
         </h3>
-
-        <div class="paperListItem">
-          <label class="emby-checkbox-label">
-            <input is="emby-checkbox" type="checkbox" id="chk-css" />
-            <span>Apply Abyss CSS automatically</span>
-          </label>
-          <div class="fieldDescription">
-            Injects the Abyss theme stylesheet into Dashboard → General → Custom CSS on every startup.
-          </div>
-        </div>
-
         <div class="paperListItem">
           <label class="emby-checkbox-label">
             <input is="emby-checkbox" type="checkbox" id="chk-spotlight" />
@@ -109,7 +100,7 @@
         <div class="paperListItem" style="padding: 12px 16px;">
           <p style="margin: 0; font-size: 0.82em; opacity: 0.6; line-height: 1.7;">
             <strong>Spotlight requires the File Transformation plugin.</strong><br/>
-            Add to plugin repositories:<br/>
+            Add this to your plugin repositories, then install File Transformation and restart Jellyfin:<br/>
             <code>https://www.iamparadox.dev/jellyfin/plugins/manifest.json</code>
           </p>
         </div>
@@ -127,31 +118,17 @@
 
   function setStatus(msg, colour) {
     var el = document.getElementById('status-text');
-    if (!el) return;
-    el.textContent = msg;
-    el.style.color = colour || '';
-  }
-
-  function populatePage(page, config) {
-    page.querySelector('#chk-css').checked       = config.ApplyAbyssCSS !== false;
-    page.querySelector('#chk-spotlight').checked = config.EnableSpotlight !== false;
-    page.querySelector('#inp-accent').value      = config.AccentColor    || '245, 245, 247';
-    page.querySelector('#inp-radius').value      = config.BorderRadius   || '24px';
-    page.querySelector('#inp-indicator').value   = config.IndicatorColor || '55, 55, 55';
-
-    setStatus(
-      config.CSSApplied
-        ? '✓ Abyss CSS is active. Hard-refresh (Ctrl+F5) if you do not see the theme.'
-        : 'Abyss CSS will be applied on the next Jellyfin restart.',
-      config.CSSApplied ? '#4caf50' : ''
-    );
+    if (el) { el.textContent = msg; el.style.color = colour || ''; }
   }
 
   function pageInit(page) {
-    // Use Jellyfin's dedicated plugin config method — handles auth and serialization correctly
     ApiClient.getPluginConfiguration(PLUGIN_ID)
       .then(function (config) {
-        populatePage(page, config);
+        page.querySelector('#chk-spotlight').checked = config.EnableSpotlight !== false;
+        page.querySelector('#inp-accent').value      = config.AccentColor    || '245, 245, 247';
+        page.querySelector('#inp-radius').value      = config.BorderRadius   || '24px';
+        page.querySelector('#inp-indicator').value   = config.IndicatorColor || '55, 55, 55';
+        setStatus('Spotlight: ' + (config.EnableSpotlight !== false ? 'enabled' : 'disabled'));
       })
       .catch(function (err) {
         console.error('[AbyssSpotlight] getPluginConfiguration failed:', err);
@@ -161,15 +138,11 @@
     page.querySelector('#btn-save').addEventListener('click', function () {
       setStatus('Saving…', '');
 
-      // Read current values from the form
       var updated = {
-        ApplyAbyssCSS:         page.querySelector('#chk-css').checked,
-        EnableSpotlight:       page.querySelector('#chk-spotlight').checked,
-        ConfigureHomeSections: true,
+        EnableSpotlight: page.querySelector('#chk-spotlight').checked,
         AccentColor:    (page.querySelector('#inp-accent').value    || '').trim() || '245, 245, 247',
         BorderRadius:   (page.querySelector('#inp-radius').value    || '').trim() || '24px',
-        IndicatorColor: (page.querySelector('#inp-indicator').value || '').trim() || '55, 55, 55',
-        CSSApplied: false
+        IndicatorColor: (page.querySelector('#inp-indicator').value || '').trim() || '55, 55, 55'
       };
 
       ApiClient.updatePluginConfiguration(PLUGIN_ID, updated)
